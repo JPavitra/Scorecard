@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Scoreboard Generator</title>
+    <link href="https://fonts.googleapis.com/css?family=Bebas+Neue" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Bebas Neue';
+            font-weight: 100;
+            text-align: center;
+            margin: 20px;
+        }
+
+        #previewCanvas {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            width: 80%;
+        }
+
+        #downloadButton {
+            margin-top: 10px;
+            display: none;
+        }
+
+        textarea {
+            width: 300px;
+            height: 150px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Divinxt Scoreboard Generator</h1>
+    
+    <form id="scoreForm">
+        <label for="scoresInput" style="font-size:30px">Enter Scores (JSON format):</label>
+        <textarea id="scoresInput" placeholder='{"1": 200, "2": 140, "3": 200, "4": 480, "5": 90}' required></textarea>
+        
+        <br><br>
+        
+        <button style="width:150px;height:50px" type="button" onclick="generateScoreboard()">Generate Scoreboard</button>
+    </form>
+    
+    <canvas id="previewCanvas"></canvas>
+    <br>
+    <button id="downloadButton" style="width:150px;height:50px" onclick="downloadImage()">Download Scoreboard</button>
+
+    <script>
+        let canvas, ctx;
+
+        function generateScoreboard() {
+            const scoresInput = document.getElementById("scoresInput").value;
+
+            if (!scoresInput) {
+                alert("Please enter the scores.");
+                return;
+            }
+
+            let scores;
+            try {
+                scores = JSON.parse(scoresInput);
+            } catch (e) {
+                alert("Invalid JSON format.");
+                return;
+            }
+
+            drawScoreboard(scores);
+        }
+
+        function drawScoreboard(scores) {
+            const img = new Image();
+            img.src = "scoreboard.png"; // Ensure your image path is correct
+
+            img.onload = function () {
+                canvas = document.getElementById("previewCanvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0);
+
+                // Predefined positions for each score
+                const positions = {
+                    "1": { x: 60, y: 700 },
+                    "2": { x: 370, y: 700 },
+                    "3": { x: 690, y: 700 },
+                    "4": { x: 1010, y: 700 },
+                    "5": { x: 1350, y: 700 }
+                };
+
+                // Set font and color
+                ctx.font = '140px "Bebas Neue"';
+                ctx.fillStyle = "black";
+
+                // Loop through the scores and display them at predefined positions
+                Object.keys(scores).forEach(key => {
+                    if (positions[key]) {
+                        const { x, y } = positions[key];
+                        ctx.fillText(` ${scores[key]}`, x, y);
+                    }
+                });
+
+                // Show download button after generating the scoreboard
+                document.getElementById("downloadButton").style.display = 'inline-block';
+            };
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL("image/jpeg");
+            link.download = 'Scoreboard.jpeg';
+            link.click();
+        }
+    </script>
+</body>
+
+</html>
