@@ -20,7 +20,8 @@
             width: 80%;
         }
 
-        #downloadButton {
+        #downloadButton,
+        #generateButton {
             margin-top: 10px;
             display: none;
         }
@@ -29,29 +30,49 @@
             width: 300px;
             height: 150px;
         }
+
+        .team-container {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* .team-img {
+            display: inline-block;
+            margin: 10px;
+        } */
     </style>
 </head>
 
 <body>
     <h1>Divinxt Scoreboard Generator</h1>
-    
+
     <form id="scoreForm">
         <label for="scoresInput" style="font-size:30px">Enter Scores (JSON format):</label>
         <textarea id="scoresInput" placeholder='{"1": 200, "2": 140, "3": 200, "4": 480, "5": 90}' required></textarea>
-        
+
         <br><br>
-        
-        <button style="width:150px;height:50px" type="button" onclick="generateScoreboard()">Generate Scoreboard</button>
+
+        <!-- Show Scores Button -->
+        <button style="width:150px;height:50px" type="button" onclick="showScores()">Show Scores</button>
     </form>
-    
+
+    <div class="team-container" id="teamContainer"></div>
+
     <canvas id="previewCanvas"></canvas>
     <br>
+
+    <!-- Generate Final Scoreboard Button -->
+    <button id="generateButton" style="width:150px;height:50px" type="button" onclick="generateScoreboard()">Generate
+        Scoreboard</button>
+
+    <!-- Download Scoreboard Button -->
     <button id="downloadButton" style="width:150px;height:50px" onclick="downloadImage()">Download Scoreboard</button>
 
     <script>
         let canvas, ctx;
 
-        function generateScoreboard() {
+        function showScores() {
             const scoresInput = document.getElementById("scoresInput").value;
 
             if (!scoresInput) {
@@ -67,38 +88,85 @@
                 return;
             }
 
-            drawScoreboard(scores);
+            const teamContainer = document.getElementById("teamContainer");
+            teamContainer.innerHTML = ''; // Clear previous team images
+
+            // Create images for teams and set data-score attribute
+            for (let i = 1; i <= 5; i++) {
+                // Create the canvas for the team image
+                const imgCanvas = document.createElement('canvas');
+
+                // Set the width and height of the canvas based on window size percentage
+                const canvasWidth = window.innerWidth * 0.68; // 70% of the window width
+                const canvasHeight = window.innerHeight * 0.27; // 30% of the window height
+                imgCanvas.width = canvasWidth;
+                imgCanvas.height = canvasHeight;
+
+                // Set the data-score attribute on the canvas
+                const score = scores[i];
+                imgCanvas.setAttribute('data-score', score); // Add the data-score attribute
+
+                // Create a context for drawing the image and text
+                const imgCtx = imgCanvas.getContext('2d');
+                const imgToDraw = new Image();
+                imgToDraw.src = `team${i}.png`;
+
+                // Draw the image and overlay the score text when the image is loaded
+                imgToDraw.onload = () => {
+                    imgCtx.drawImage(imgToDraw, 0, 0, canvasWidth, canvasHeight);
+
+                    // Set font style and size relative to canvas size
+                    imgCtx.font = 'bold 70px Manrope';
+                    imgCtx.fillStyle = 'white';
+                    imgCtx.fillText(`${score}`, 10, 125); // Add score text to the canvas
+                };
+
+                // Append the canvas to the container
+                teamContainer.appendChild(imgCanvas);
+            }
+
+
+            // After showing scores, display the Generate Scoreboard button
+            document.getElementById("generateButton").style.display = 'inline-block';
         }
 
-        function drawScoreboard(scores) {
+        function generateScoreboard() {
             const img = new Image();
-            img.src = "scorecardNew.jpg"; // Ensure your image path is correct
+            img.src = "scoreCardBg.png"; // Background image path
 
             img.onload = function () {
+                // Get the canvas and context to draw the final scoreboard
                 canvas = document.getElementById("previewCanvas");
                 canvas.width = img.width;
                 canvas.height = img.height;
                 ctx = canvas.getContext("2d");
+
+                // Draw the background image first
                 ctx.drawImage(img, 0, 0);
 
-                // Predefined positions for each score
+                // Get all canvas elements (team images) and sort them based on their data-score attribute
+                const teamCanvases = Array.from(document.querySelectorAll('canvas')).map(canvas => ({
+                    score: parseInt(canvas.getAttribute('data-score')),
+                    canvasElement: canvas
+                })).sort((a, b) => b.score - a.score); // Sort by score, descending
+
+                // Predefined positions for placing team canvases on the scoreboard image
                 const positions = {
-                    "1": { x: 60, y: 760 },
-                    "2": { x: 60, y: 1090 },
-                    "3": { x: 60, y: 1420 },
-                    "4": { x: 60, y: 1760 },
-                    "5": { x: 60, y: 2090 }
+                    "1": { x: img.width * 0.05, y: img.height * 0.23 }, // 3% from left, 10% from top
+                    "2": { x: img.width * 0.05, y: img.height * 0.38 }, // 3% from left, 22% from top
+                    "3": { x: img.width * 0.05, y: img.height * 0.53 }, // 3% from left, 45% from top
+                    "4": { x: img.width * 0.05, y: img.height * 0.68 }, // 3% from left, 67% from top
+                    "5": { x: img.width * 0.05, y: img.height * 0.83 }  // 3% from left, 85% from top
                 };
 
-                // Set font and color
-                ctx.font = '100px "Manrope"';
-                ctx.fillStyle = "White";
 
-                // Loop through the scores and display them at predefined positions
-                Object.keys(scores).forEach(key => {
-                    if (positions[key]) {
-                        const { x, y } = positions[key];
-                        ctx.fillText(` ${scores[key]}`, x, y);
+                // Loop through the sorted canvases and draw them on the final scoreboard
+                teamCanvases.forEach((teamCanvas, index) => {
+                    const position = positions[index + 1];
+                    if (position) {
+                        const { x, y } = position;
+                        // Draw the canvas (team image) at the corresponding position on the scoreboard
+                        ctx.drawImage(teamCanvas.canvasElement, x, y, teamCanvas.canvasElement.width, teamCanvas.canvasElement.height);
                     }
                 });
 
@@ -106,6 +174,7 @@
                 document.getElementById("downloadButton").style.display = 'inline-block';
             };
         }
+
 
         function downloadImage() {
             const link = document.createElement('a');
